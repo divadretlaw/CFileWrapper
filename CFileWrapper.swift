@@ -39,16 +39,16 @@ protocol CFileWrapperDirectoryDelegate {
 }
 
 class CFileWrapper {
-    
+
     // MARK: Read File
-    
+
     /**
      * Reads a file line by line and returns every line to CFileWrapperDelegate
      */
     class func readFrom(file: String, delegate: CFileWrapperFileDelegate) {
-        readFrom(file, bufferSize: 1024, delegate: delegate)
+        readFrom(file: file, bufferSize: 4096, delegate: delegate)
     }
-    
+
     /**
      * Reads a file line by line with a custom buffer size and returns every line to CFileWrapperDelegate
      */
@@ -58,25 +58,23 @@ class CFileWrapper {
             return
         }
 
-        var fd = fopen(file, "r")
+        if var fd = fopen(file, "r") {
+            while let line = readFileHelper(fd: &fd, bufferSize: bufferSize) {
+                delegate.CFileWrapper(readLine: line)
+            }
 
-        if (fd == nil) {
+            fclose(fd)
+        } else  {
             perror("Could not open file \(file)")
             return
         }
-        
-        while let line = readFileHelper(&fd, bufferSize: bufferSize) {
-            delegate.CFileWrapper(readLine: line)
-        }
-
-        fclose(fd)
     }
 
     /**
      * Reads a file line by line and returns the filecontent as a String
      */
     class func readFrom(file: String) -> String? {
-        return readFrom(file, bufferSize: 1024)
+        return readFrom(file: file, bufferSize: 4096)
     }
 
     /**
@@ -88,34 +86,32 @@ class CFileWrapper {
             return nil
         }
 
-        var fd = fopen(file, "r")
+        if var fd = fopen(file, "r") {
+            var message = String()
+            while let line = readFileHelper(fd: &fd, bufferSize: bufferSize) {
+                message += line
+            }
 
-        if (fd == nil) {
+            fclose(fd)
+            return message
+        } else {
             perror("Could not open file \(file)")
             return nil
         }
-        
-        var message = String()
-        while let line = readFileHelper(&fd, bufferSize: bufferSize) {
-            message += line
-        }
-
-        fclose(fd)
-        return message
     }
-    
-    private class func readFileHelper(inout fd: UnsafeMutablePointer<FILE>, bufferSize: Int32) -> String? {
-        let line = UnsafeMutablePointer<Int8>.alloc(Int(bufferSize))
-        
+
+    private class func readFileHelper(fd: inout UnsafeMutablePointer<FILE>, bufferSize: Int32) -> String? {
+        let line = UnsafeMutablePointer<Int8>(allocatingCapacity: Int(bufferSize))
+
         if (fgets(line, bufferSize, fd) != nil) {
-            if let text = String.fromCString(line) {
+            if let text = String(validatingUTF8: line) {
                 return text
             }
         }
-        
+
         return nil
     }
-    
+
     // MARK : Write File
 
     /**
@@ -130,7 +126,7 @@ class CFileWrapper {
         }
 
         fputs(content, fd)
-    
+
         fclose(fd)
     }
 
@@ -139,76 +135,72 @@ class CFileWrapper {
      */
     class func appendTo(file: String, content: String) {
         let fd = fopen(file, "a+")
-        
+
         if (fd == nil) {
             perror("Could not open file \(file)")
             return
         }
-        
+
         fputs(content, fd)
-        
+
         fclose(fd)
     }
-    
+
     // MARK : Directory
-    
+
     /**
-    * Returns every file from the given directory to CFileWrapperDelegate
-    */
+     * Returns every file from the given directory to CFileWrapperDelegate
+     */
     class func getFiles(directory: String, delegate: CFileWrapperDirectoryDelegate) {
-        var dir = opendir(directory)
-        
-        if (dir == nil) {
+        if var dir = opendir(directory) {
+            while let file = getFilesHelper(dir: &dir) {
+                delegate.CFileWrapper(getFiles: file)
+            }
+            closedir(dir)
+        } else {
             perror("Unable to open directory \(directory)")
-            return
         }
-        
-        while let file = getFilesHelper(&dir) {
-            delegate.CFileWrapper(getFiles: file)
-        }
-        
-        closedir(dir)
     }
-    
+
     /**
      * Returns every file from the given directory in an array
      */
     class func getFiles(directory: String) -> Array<String>? {
-        var dir = opendir(directory)
-        var array = Array<String>()
-        
-        if (dir == nil) {
+        if var dir = opendir(directory) {
+            var array = Array<String>()
+
+            while let file = getFilesHelper(dir: &dir) {
+                array.append(file)
+            }
+
+            closedir(dir)
+            return array
+        } else {
             perror("Unable to open directory \(directory)")
             return nil
         }
-        
-        while let file = getFilesHelper(&dir) {
-            array.append(file)
-        }
-        
-        closedir(dir)
-        return array
     }
-    
-    private class func getFilesHelper(inout dir: CFileWrapperDIR) -> String? {
+
+    private class func getFilesHelper( dir: inout CFileWrapperDIR) -> String? {
         let entry = readdir(dir)
-        
+
         if (entry != nil) {
             var nameBuf = Array<CChar>()
-            
-            let mirror = Mirror(reflecting: entry.memory.d_name)
+
+            let mirror = Mirror(reflecting: entry?.pointee.d_name)
             for (_, elem) in mirror.children {
                 if let new = elem as? Int8 {
                     nameBuf.append(new)
                 }
             }
-            
+
             nameBuf.append(0)
-            if let name = String.fromCString(nameBuf) {
+
+            if let name = String(validatingUTF8: nameBuf) {
                 return name
             }
         }
-        
+
         return nil
     }
 
