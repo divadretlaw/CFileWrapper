@@ -101,7 +101,7 @@ class CFileWrapper {
     }
 
     private class func readFileHelper(fd: inout UnsafeMutablePointer<FILE>, bufferSize: Int32) -> String? {
-        let line = UnsafeMutablePointer<Int8>(allocatingCapacity: Int(bufferSize))
+        let line = UnsafeMutablePointer<Int8>.allocate(capacity: Int(bufferSize))
 
         if (fgets(line, bufferSize, fd) != nil) {
             if let text = String(validatingUTF8: line) {
