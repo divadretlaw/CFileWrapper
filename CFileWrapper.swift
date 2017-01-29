@@ -22,7 +22,7 @@
 // THE SOFTWARE.
 //
 
-#if os(OSX) || os(iOS) || os(watchOS) || os(tvOS)
+#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
     import Darwin
     private typealias CFileWrapperDIR = UnsafeMutablePointer<DIR>
 #else
@@ -45,21 +45,21 @@ class CFileWrapper {
     /**
      * Reads a file line by line and returns every line to CFileWrapperDelegate
      */
-    class func readFrom(file: String, delegate: CFileWrapperFileDelegate) {
-        readFrom(file: file, bufferSize: 4096, delegate: delegate)
+    class func readFrom(_ file: String, delegate: CFileWrapperFileDelegate) {
+        readFrom(file, bufferSize: 4096, delegate: delegate)
     }
 
     /**
      * Reads a file line by line with a custom buffer size and returns every line to CFileWrapperDelegate
      */
-    class func readFrom(file: String, bufferSize: Int32, delegate: CFileWrapperFileDelegate) {
+    class func readFrom(_ file: String, bufferSize: Int32, delegate: CFileWrapperFileDelegate) {
         if (bufferSize < 1) {
             perror("Invalid buffer size")
             return
         }
 
         if var fd = fopen(file, "r") {
-            while let line = readFileHelper(fd: &fd, bufferSize: bufferSize) {
+            while let line = readFileHelper(&fd, bufferSize: bufferSize) {
                 delegate.CFileWrapper(readLine: line)
             }
 
@@ -73,14 +73,14 @@ class CFileWrapper {
     /**
      * Reads a file line by line and returns the filecontent as a String
      */
-    class func readFrom(file: String) -> String? {
-        return readFrom(file: file, bufferSize: 4096)
+    class func readFrom(_ file: String) -> String? {
+        return readFrom(file, bufferSize: 4096)
     }
 
     /**
      * Reads a file line by line with a custom buffer size and returns the filecontent as a String
      */
-    class func readFrom(file: String, bufferSize: Int32) -> String? {
+    class func readFrom(_ file: String, bufferSize: Int32) -> String? {
         if (bufferSize < 1) {
             perror("Invalid buffer size")
             return nil
@@ -88,7 +88,7 @@ class CFileWrapper {
 
         if var fd = fopen(file, "r") {
             var message = String()
-            while let line = readFileHelper(fd: &fd, bufferSize: bufferSize) {
+            while let line = readFileHelper(&fd, bufferSize: bufferSize) {
                 message += line
             }
 
@@ -100,7 +100,7 @@ class CFileWrapper {
         }
     }
 
-    private class func readFileHelper(fd: inout UnsafeMutablePointer<FILE>, bufferSize: Int32) -> String? {
+    private class func readFileHelper(_ fd: inout UnsafeMutablePointer<FILE>, bufferSize: Int32) -> String? {
         let line = UnsafeMutablePointer<Int8>.allocate(capacity: Int(bufferSize))
 
         if (fgets(line, bufferSize, fd) != nil) {
@@ -117,7 +117,7 @@ class CFileWrapper {
     /**
      * Overwrites an exsiting file or creates a new file with a String as content
      */
-    class func writeTo(file: String, content: String) {
+    class func writeTo(_ file: String, content: String) {
         let fd = fopen(file, "w")
 
         if (fd == nil) {
@@ -133,7 +133,7 @@ class CFileWrapper {
     /**
      * Appends a String to an existing file or creates a new file
      */
-    class func appendTo(file: String, content: String) {
+    class func appendTo(_ file: String, content: String) {
         let fd = fopen(file, "a+")
 
         if (fd == nil) {
@@ -151,9 +151,9 @@ class CFileWrapper {
     /**
      * Returns every file from the given directory to CFileWrapperDelegate
      */
-    class func getFiles(directory: String, delegate: CFileWrapperDirectoryDelegate) {
+    class func getFilesFrom(_ directory: String, delegate: CFileWrapperDirectoryDelegate) {
         if var dir = opendir(directory) {
-            while let file = getFilesHelper(dir: &dir) {
+            while let file = getFilesHelper(&dir) {
                 delegate.CFileWrapper(getFiles: file)
             }
             closedir(dir)
@@ -165,11 +165,11 @@ class CFileWrapper {
     /**
      * Returns every file from the given directory in an array
      */
-    class func getFiles(directory: String) -> Array<String>? {
+    class func getFilesFrom(directory: String) -> Array<String>? {
         if var dir = opendir(directory) {
             var array = Array<String>()
 
-            while let file = getFilesHelper(dir: &dir) {
+            while let file = getFilesHelper(&dir) {
                 array.append(file)
             }
 
@@ -181,13 +181,13 @@ class CFileWrapper {
         }
     }
 
-    private class func getFilesHelper( dir: inout CFileWrapperDIR) -> String? {
+    private class func getFilesHelper(_ dir: inout CFileWrapperDIR) -> String? {
         let entry = readdir(dir)
 
         if (entry != nil) {
             var nameBuf = Array<CChar>()
 
-            let mirror = Mirror(reflecting: entry?.pointee.d_name)
+            let mirror = Mirror(reflecting: entry?.pointee.d_name as Any)
             for (_, elem) in mirror.children {
                 if let new = elem as? Int8 {
                     nameBuf.append(new)
