@@ -168,11 +168,13 @@ class CFileWrapper {
     class func getFilesFrom(directory: String) -> Array<String>? {
         if var dir = opendir(directory) {
             var array = Array<String>()
-
+            
             while let file = getFilesHelper(&dir) {
-                array.append(file)
+                if ( access( file, F_OK ) == -1 ) {
+                    array.append(file)
+                }
             }
-
+            
             closedir(dir)
             return array
         } else {
@@ -180,27 +182,21 @@ class CFileWrapper {
             return nil
         }
     }
-
+    
     private class func getFilesHelper(_ dir: inout CFileWrapperDIR) -> String? {
-        let entry = readdir(dir)
-
-        if (entry != nil) {
-            var nameBuf = Array<CChar>()
-
-            let mirror = Mirror(reflecting: entry?.pointee.d_name as Any)
-            for (_, elem) in mirror.children {
-                if let new = elem as? Int8 {
-                    nameBuf.append(new)
-                }
+        if let entry = readdir(dir) {
+            var nameBuf: [CChar] = Array()
+            
+            for (_, elem) in Mirror(reflecting: entry.pointee.d_name as Any).children {
+                nameBuf.append(elem as! Int8)
             }
-
+            
             nameBuf.append(0)
-
             if let name = String(validatingUTF8: nameBuf) {
                 return name
             }
         }
-
+        
         return nil
     }
 
