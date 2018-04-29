@@ -1,7 +1,7 @@
 //
 //  CFileWrapper.swift
 //
-//  Copyright © 2015 David Walter (www.davidwalter.at)
+//  Copyright © 2018 David Walter (www.davidwalter.at)
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -30,29 +30,38 @@
     private typealias CFileWrapperDIR = COpaquePointer
 #endif
 
-protocol CFileWrapperFileDelegate {
-    func CFileWrapper(readLine line: String)
+protocol CFileWrapperDelegate {
+	func CFileWrapper(read line: String)
+	func CFileWrapper(files file: String)
 }
 
-protocol CFileWrapperDirectoryDelegate {
-    func CFileWrapper(getFiles file: String)
+extension CFileWrapperDelegate {
+	func CFileWrapper(read line: String) {}
+	func CFileWrapper(files file: String) {}
 }
 
 class CFileWrapper {
 
     // MARK: Read File
 
+	/**
+	 * Reads a file line by line and calls the completion handler with the file content
+	 */
+	class func read(_ file: String, completion: (String?) -> Void) {
+		completion(read(file))
+	}
+	
     /**
      * Reads a file line by line and returns every line to CFileWrapperDelegate
      */
-    class func readFrom(_ file: String, delegate: CFileWrapperFileDelegate) {
-        readFrom(file, bufferSize: 4096, delegate: delegate)
+    class func read(_ file: String, delegate: CFileWrapperDelegate) {
+        read(file, bufferSize: 4096, delegate: delegate)
     }
 
     /**
      * Reads a file line by line with a custom buffer size and returns every line to CFileWrapperDelegate
      */
-    class func readFrom(_ file: String, bufferSize: Int32, delegate: CFileWrapperFileDelegate) {
+    class func read(_ file: String, bufferSize: Int32, delegate: CFileWrapperDelegate) {
         if (bufferSize < 1) {
             perror("Invalid buffer size")
             return
@@ -60,7 +69,7 @@ class CFileWrapper {
 
         if var fd = fopen(file, "r") {
             while let line = readFileHelper(&fd, bufferSize: bufferSize) {
-                delegate.CFileWrapper(readLine: line)
+                delegate.CFileWrapper(read: line)
             }
 
             fclose(fd)
@@ -73,14 +82,14 @@ class CFileWrapper {
     /**
      * Reads a file line by line and returns the filecontent as a String
      */
-    class func readFrom(_ file: String) -> String? {
-        return readFrom(file, bufferSize: 4096)
+    class func read(_ file: String) -> String? {
+        return read(file, bufferSize: 4096)
     }
 
     /**
      * Reads a file line by line with a custom buffer size and returns the filecontent as a String
      */
-    class func readFrom(_ file: String, bufferSize: Int32) -> String? {
+    class func read(_ file: String, bufferSize: Int32) -> String? {
         if (bufferSize < 1) {
             perror("Invalid buffer size")
             return nil
@@ -117,7 +126,7 @@ class CFileWrapper {
     /**
      * Overwrites an exsiting file or creates a new file with a String as content
      */
-    class func writeTo(_ file: String, content: String) {
+    class func write(_ file: String, content: String) {
         let fd = fopen(file, "w")
 
         if (fd == nil) {
@@ -151,10 +160,10 @@ class CFileWrapper {
     /**
      * Returns every file from the given directory to CFileWrapperDelegate
      */
-    class func getFilesFrom(_ directory: String, delegate: CFileWrapperDirectoryDelegate) {
+    class func files(_ directory: String, delegate: CFileWrapperDelegate) {
         if var dir = opendir(directory) {
             while let file = getFilesHelper(&dir) {
-                delegate.CFileWrapper(getFiles: file)
+                delegate.CFileWrapper(files: file)
             }
             closedir(dir)
         } else {
@@ -165,7 +174,7 @@ class CFileWrapper {
     /**
      * Returns every file from the given directory in an array
      */
-    class func getFilesFrom(directory: String) -> Array<String>? {
+    class func files(_ directory: String) -> Array<String>? {
         if var dir = opendir(directory) {
             var array = Array<String>()
             

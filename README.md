@@ -7,20 +7,32 @@ You can read files, save files, append to files and list directories
 ## Usage
 
 ```swift
-if let hello = CFileWrapper.readFrom("/Users/david/Desktop/HelloWorld.txt") {
+if let hello = CFileWrapper.read("HelloWorld.txt") {
   print(hello)
 }
 ```
 
+Another way to read the file is using a completion handler
+
+```swift
+CFileWrapper.read("HelloWorld.txt") { text in
+	guard let text = text else {
+		print("Unable to read file")
+		return
+	}
+	print(text)
+}
+``
+
 You can also read by line with a delegate
 
 ```swift
-class MyClass: CFileWrapperFileDelegate {
-  func CFileWrapper(readLine line: String) {
+class MyClass: CFileWrapperDelegate {
+  func CFileWrapper(read line: String) {
     print(line)
   }
 }
 
 let myClass = MyClass()
-CFileWrapper.readFrom("/Users/david/Desktop/HelloWorld.txt", delegate: myClass)
+CFileWrapper.read("HelloWorld.txt", delegate: myClass)
 ```
