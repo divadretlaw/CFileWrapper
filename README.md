@@ -22,7 +22,7 @@ CFileWrapper.read("HelloWorld.txt") { text in
 	}
 	print(text)
 }
-``
+```
 
 You can also read by line with a delegate
 
@@ -34,5 +34,5 @@ class MyClass: CFileWrapperDelegate {
 }
 
 let myClass = MyClass()
-CFileWrapper.read("HelloWorld.txt", delegate: myClass)
+CFileWrapper.readw("HelloWorld.txt", delegate: myClass)
 ```
